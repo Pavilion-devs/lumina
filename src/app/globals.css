@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #18181b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #fafafa;
+  color: #18181b;
+  antialiasing: antialiased;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: "DM Sans", sans-serif;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.line-mask {
+  overflow: hidden;
+  display: inline-flex;
+}
+
+.grid-lines {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+}
+
+.grid-line {
+  width: 1px;
+  height: 100%;
+  background-color: rgba(228, 228, 231, 0.4);
+}
+
+::selection {
+  background-color: #18181b;
+  color: white;
+}
+
+.wallet-adapter-button {
+  font-family: "DM Sans", sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.025em !important;
+}
