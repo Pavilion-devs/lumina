@@ -18,6 +18,24 @@ export interface AudiusTrack {
   createdAt: string
 }
 
+export interface AudiusPlaylist {
+  id: string
+  name: string
+  description?: string
+  artwork?: {
+    '150x150': string
+    '480x480': string
+    '1000x1000': string
+  }
+  trackCount: number
+  repostCount: number
+  favoriteCount: number
+  totalPlayCount: number
+  createdAt: string
+  owner: AudiusUser
+  tracks: AudiusTrack[]
+}
+
 export interface AudiusUser {
   id: string
   handle: string

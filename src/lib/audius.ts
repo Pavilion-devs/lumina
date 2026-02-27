@@ -40,7 +40,25 @@ interface AudiusUserResponse {
   wallet?: string
 }
 
-import type { AudiusTrack, AudiusUser } from '@/types'
+interface AudiusPlaylistResponse {
+  id: string
+  playlist_name: string
+  description?: string
+  artwork?: {
+    '150x150': string
+    '480x480': string
+    '1000x1000': string
+  }
+  track_count?: number
+  repost_count?: number
+  favorite_count?: number
+  total_play_count?: number
+  created_at: string
+  user: AudiusUserResponse
+  tracks?: AudiusTrackResponse[]
+}
+
+import type { AudiusPlaylist, AudiusTrack, AudiusUser } from '@/types'
 
 async function fetchAudius<T>(endpoint: string): Promise<T> {
   const headers: HeadersInit = {}
@@ -96,6 +114,22 @@ function mapUser(user: AudiusUserResponse): AudiusUser {
   }
 }
 
+function mapPlaylist(playlist: AudiusPlaylistResponse): AudiusPlaylist {
+  return {
+    id: playlist.id,
+    name: playlist.playlist_name,
+    description: playlist.description,
+    artwork: playlist.artwork,
+    trackCount: playlist.track_count || 0,
+    repostCount: playlist.repost_count || 0,
+    favoriteCount: playlist.favorite_count || 0,
+    totalPlayCount: playlist.total_play_count || 0,
+    createdAt: playlist.created_at,
+    owner: mapUser(playlist.user),
+    tracks: Array.isArray(playlist.tracks) ? playlist.tracks.map(mapTrack) : [],
+  }
+}
+
 export async function getTrendingTracks(limit = 20, offset = 0): Promise<AudiusTrack[]> {
   const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100)
   const safeOffset = Math.max(Math.floor(offset), 0)
@@ -108,6 +142,17 @@ export async function getTrendingTracks(limit = 20, offset = 0): Promise<AudiusT
 export async function getTrack(trackId: string): Promise<AudiusTrack> {
   const track = await fetchAudius<AudiusTrackResponse>(`/tracks/${trackId}`)
   return mapTrack(track)
+}
+
+export async function getPlaylist(playlistId: string): Promise<AudiusPlaylist> {
+  const response = await fetchAudius<AudiusPlaylistResponse[] | AudiusPlaylistResponse>(
+    `/playlists/${playlistId}`
+  )
+  const playlist = Array.isArray(response) ? response[0] : response
+  if (!playlist) {
+    throw new Error('Playlist not found')
+  }
+  return mapPlaylist(playlist)
 }
 
 export async function searchTracks(query: string, limit = 20): Promise<AudiusTrack[]> {
@@ -162,6 +207,20 @@ export async function getStreamUrl(trackId: string): Promise<string> {
 export function getArtworkUrl(track: AudiusTrack, size: '150x150' | '480x480' | '1000x1000' = '480x480'): string {
   if (track.artwork) {
     return track.artwork[size]
+  }
+  return '/placeholder-album.png'
+}
+
+export function getPlaylistArtworkUrl(
+  playlist: AudiusPlaylist,
+  size: '150x150' | '480x480' | '1000x1000' = '480x480'
+): string {
+  if (playlist.artwork) {
+    return playlist.artwork[size]
+  }
+  const firstTrackArtwork = playlist.tracks.find((track) => Boolean(track.artwork))?.artwork
+  if (firstTrackArtwork) {
+    return firstTrackArtwork[size]
   }
   return '/placeholder-album.png'
 }
