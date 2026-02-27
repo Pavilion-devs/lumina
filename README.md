@@ -3,6 +3,10 @@
 Lumina is a wallet-connected music social app built with Next.js.  
 It combines Audius discovery with Tapestry onchain social actions (profiles, follows, likes, comments) and a local points leaderboard.
 
+Try it here: https://lumina-opal-eta.vercel.app
+Demo Video: https://youtu.be/pv0c7FJZ4ro
+
+
 ## Current Scope
 
 - Audius integration for trending tracks, track search, artist discovery, artist/track detail pages
