@@ -10,7 +10,9 @@ import {
   searchUsers,
   getProfilePictureUrl,
 } from '@/lib/audius'
+import { getPersonalizedDiscoveryRails, type PersonalizedRail } from '@/lib/personalization'
 import { formatNumber } from '@/lib/utils'
+import { useRewards } from '@/hooks'
 import type { AudiusTrack, AudiusUser } from '@/types'
 
 const SEARCH_PAGE_SIZE = 20
@@ -48,9 +50,12 @@ function mergeUniqueArtists(current: AudiusUser[], incoming: AudiusUser[]): Audi
 }
 
 export default function DiscoverPage() {
+  const { isConnected, recentActivity } = useRewards(200)
   const [artists, setArtists] = useState<AudiusUser[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [rails, setRails] = useState<PersonalizedRail[]>([])
+  const [railsLoading, setRailsLoading] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
@@ -67,6 +72,37 @@ export default function DiscoverPage() {
   useEffect(() => {
     void loadTrendingInitial()
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadRails = async () => {
+      if (!isConnected || recentActivity.length === 0) {
+        setRails([])
+        setRailsLoading(false)
+        return
+      }
+
+      try {
+        setRailsLoading(true)
+        const next = await getPersonalizedDiscoveryRails(recentActivity)
+        if (!cancelled) {
+          setRails(next)
+        }
+      } catch (err) {
+        console.error('Error loading personalized rails:', err)
+        if (!cancelled) setRails([])
+      } finally {
+        if (!cancelled) setRailsLoading(false)
+      }
+    }
+
+    void loadRails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isConnected, recentActivity])
 
   const loadTrendingInitial = async () => {
     try {
@@ -205,6 +241,67 @@ export default function DiscoverPage() {
             )}
           </div>
         </form>
+
+        {(railsLoading || rails.length > 0) && (
+          <section className="mb-10 rounded-3xl border border-zinc-200 bg-white p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Icon icon="solar:stars-bold-duotone" width="18" className="text-zinc-700" />
+              <h2 className="text-lg font-medium tracking-tight text-zinc-900">Personalized For You</h2>
+            </div>
+
+            {railsLoading ? (
+              <div className="grid grid-cols-1 gap-4">
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <div key={idx} className="rounded-2xl border border-zinc-100 p-4 animate-pulse">
+                    <div className="h-4 w-52 rounded-full bg-zinc-100 mb-3" />
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                      {Array.from({ length: 6 }).map((__, i) => (
+                        <div key={i} className="aspect-square rounded-xl bg-zinc-100" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rails.map((rail) => (
+                  <div key={rail.id} className="rounded-2xl border border-zinc-100 p-4">
+                    <div className="mb-3">
+                      <p className="text-sm font-semibold text-zinc-900">{rail.title}</p>
+                      <p className="text-xs text-zinc-500">{rail.subtitle}</p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {rail.artists.map((artist) => (
+                        <Link
+                          key={`${rail.id}-${artist.id}`}
+                          href={`/artist/${artist.id}`}
+                          className="group"
+                        >
+                          <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 ring-1 ring-zinc-200 transition-all group-hover:ring-zinc-400 mb-2">
+                            {artist.profilePicture ? (
+                              <Image
+                                src={getProfilePictureUrl(artist, '150x150')}
+                                alt={artist.name}
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Icon icon="solar:user-bold-duotone" width="24" className="text-zinc-300" />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs font-medium text-zinc-800 truncate">{artist.name}</p>
+                          <p className="text-[11px] text-zinc-500 truncate">@{artist.handle}</p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div className="flex flex-wrap gap-2">

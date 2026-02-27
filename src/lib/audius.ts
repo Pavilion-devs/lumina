@@ -97,7 +97,11 @@ function mapUser(user: AudiusUserResponse): AudiusUser {
 }
 
 export async function getTrendingTracks(limit = 20, offset = 0): Promise<AudiusTrack[]> {
-  const tracks = await fetchAudius<AudiusTrackResponse[]>(`/tracks/trending?limit=${limit}&offset=${offset}`)
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100)
+  const safeOffset = Math.max(Math.floor(offset), 0)
+  const tracks = await fetchAudius<AudiusTrackResponse[]>(
+    `/tracks/trending?limit=${safeLimit}&offset=${safeOffset}`
+  )
   return tracks.map(mapTrack)
 }
 

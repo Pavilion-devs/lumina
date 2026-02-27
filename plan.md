@@ -87,7 +87,7 @@ User Action -> Wallet Context -> Tapestry social write/read
 
 ### Phase C — Discovery Intelligence
 
-- [ ] Add personalized rails:
+- [x] Add personalized rails:
   - because you followed X
   - similar genre/mood to your likes
   - rising artists from your interaction graph
