@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local docs not intended for remote
+DEMO_SCRIPT.md
+SUBMISSION_ANSWERS.md
+plan.md
