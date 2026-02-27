@@ -5,7 +5,11 @@ import { followUser, unfollowUser, isFollowing, setLocalFollowState } from '@/li
 import { addPoints } from '@/lib/rewards'
 import { useProfileId } from '@/hooks/useProfileId'
 
-export function useFollow(followingId: string | null) {
+interface FollowContext {
+  artistFollowerCount?: number
+}
+
+export function useFollow(followingId: string | null, context?: FollowContext) {
   const [isFollowingUser, setIsFollowingUser] = useState(false)
   const [loading, setLoading] = useState(false)
   const { profileId, walletAddress } = useProfileId()
@@ -41,14 +45,21 @@ export function useFollow(followingId: string | null) {
         await followUser(profileId, followingId)
         setLocalFollowState(profileId, followingId, true)
         setIsFollowingUser(true)
-        if (walletAddress) addPoints(walletAddress, 'FOLLOW_ARTIST', { artistId: followingId })
+        if (walletAddress) {
+          addPoints(walletAddress, 'FOLLOW_ARTIST', {
+            artistId: followingId,
+            ...(typeof context?.artistFollowerCount === 'number'
+              ? { artistFollowerCount: context.artistFollowerCount }
+              : {}),
+          })
+        }
       }
     } catch (err) {
       console.error('Error toggling follow:', err)
     } finally {
       setLoading(false)
     }
-  }, [profileId, walletAddress, followingId, isFollowingUser])
+  }, [context?.artistFollowerCount, profileId, walletAddress, followingId, isFollowingUser])
 
   return {
     isFollowing: isFollowingUser,

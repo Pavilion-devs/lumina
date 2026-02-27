@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useState } from 'react'
 import { createProfile, getProfile, updateProfile } from '@/lib/tapestry'
 import { addPoints } from '@/lib/rewards'
+import { isGoogleImageSearchUrl, isValidHttpUrl } from '@/lib/utils'
 import {
   clearCachedDisplayName,
   findWalletProfileByUsername,
@@ -141,9 +142,33 @@ export function useTapestryProfile() {
           }
         }
 
+        const currentBio = (profile.bio ?? '').trim()
+        const requestedBio = typeof data.bio === 'string' ? data.bio.trim() : undefined
+        const bioToWrite = requestedBio !== undefined && requestedBio !== currentBio ? requestedBio : undefined
+
+        const currentImage = (profile.image ?? '').trim()
+        const requestedImage = typeof data.image === 'string' ? data.image.trim() : undefined
+        const imageChanged = requestedImage !== undefined && requestedImage !== currentImage
+        const imageToWrite = imageChanged && requestedImage ? requestedImage : undefined
+
+        if (imageChanged && requestedImage && isGoogleImageSearchUrl(requestedImage)) {
+          setError('Use a direct image URL, not a Google search page URL.')
+          return null
+        }
+        if (imageChanged && requestedImage && !isValidHttpUrl(requestedImage)) {
+          setError('Profile image must be a valid http(s) URL.')
+          return null
+        }
+
+        if (bioToWrite === undefined && imageToWrite === undefined) {
+          const full = await getProfile(activeProfileId)
+          setProfile(full ?? profile)
+          return full ?? profile
+        }
+
         const updated = await updateProfile(activeProfileId, {
-          bio: data.bio,
-          image: data.image,
+          ...(bioToWrite !== undefined ? { bio: bioToWrite } : {}),
+          ...(imageToWrite !== undefined ? { image: imageToWrite } : {}),
         })
         // Re-fetch full profile to get socialCounts
         const full = await getProfile(activeProfileId)
@@ -156,7 +181,7 @@ export function useTapestryProfile() {
         setLoading(false)
       }
     },
-    [profile?.id, profile?.username, walletAddress]
+    [profile, walletAddress]
   )
 
   const relinkProfile = useCallback(async () => {

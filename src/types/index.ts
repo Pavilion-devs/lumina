@@ -44,6 +44,7 @@ export interface TapestryProfile {
   username?: string
   bio?: string | null
   image?: string | null
+  customProperties?: Record<string, string>
   created_at?: number
   // Optional extended fields (not always returned by API)
   walletAddress?: string

@@ -4,6 +4,21 @@ import type { TapestryProfile, TapestryFollow, TapestryComment } from '@/types'
 // which forwards them server-side to api.usetapestry.dev (bypassing CORS).
 const API_URL = '/api/tapestry/'
 
+function normalizeProfile(profile: TapestryProfile): TapestryProfile {
+  const normalized = { ...profile }
+  const custom = normalized.customProperties
+
+  if ((!normalized.bio || normalized.bio.length === 0) && custom && typeof custom.bio === 'string') {
+    normalized.bio = custom.bio
+  }
+
+  if ((!normalized.image || normalized.image.length === 0) && custom && typeof custom.profileImage === 'string') {
+    normalized.image = custom.profileImage
+  }
+
+  return normalized
+}
+
 async function tapestryFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -25,11 +40,21 @@ async function tapestryFetch<T>(
   }
 
   if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload !== null
-        ? (payload as { message?: string; error?: { message?: string } }).message ||
-          (payload as { message?: string; error?: { message?: string } }).error?.message
-        : undefined
+    let message: string | undefined
+    if (typeof payload === 'object' && payload !== null) {
+      const obj = payload as Record<string, unknown>
+      if (typeof obj.message === 'string') message = obj.message
+      else if (typeof obj.error === 'string') message = obj.error
+      else if (
+        typeof obj.error === 'object' &&
+        obj.error !== null &&
+        typeof (obj.error as Record<string, unknown>).message === 'string'
+      ) {
+        message = (obj.error as Record<string, unknown>).message as string
+      } else if (typeof obj.detail === 'string') {
+        message = obj.detail
+      }
+    }
 
     throw new Error(
       `Tapestry API error: ${response.status} ${response.statusText}${message ? ` - ${message}` : ''}`
@@ -67,7 +92,7 @@ export async function createProfile(
     }),
   })
 
-  const profile = response.profile
+  const profile = normalizeProfile(response.profile)
   if (response.walletAddress) profile.walletAddress = response.walletAddress
   if (response.socialCounts) {
     profile.followerCount = response.socialCounts.followers ?? 0
@@ -85,7 +110,7 @@ export async function getProfile(profileId: string): Promise<TapestryProfile | n
       socialCounts?: { followers: number; following: number }
     }>(`profiles/${profileId}`)
 
-    const profile = response.profile
+    const profile = normalizeProfile(response.profile)
     if (response.walletAddress) profile.walletAddress = response.walletAddress
     if (response.socialCounts) {
       profile.followerCount = response.socialCounts.followers ?? 0
@@ -101,32 +126,76 @@ export async function updateProfile(
   profileId: string,
   data: { bio?: string; image?: string }
 ): Promise<TapestryProfile> {
-  // Tapestry docs use PUT /profiles/update with profileId and customProperties.
+  // Tapestry deployments have shown slight schema differences for update payloads.
+  // Try documented shape first, then compatibility fallbacks.
   const customProperties: Array<{ key: string; value: string }> = []
-  if (typeof data.bio === 'string') {
+  const customPropertiesObject: Record<string, string> = {}
+  if (data.bio !== undefined) {
     customProperties.push({ key: 'bio', value: data.bio })
+    customPropertiesObject.bio = data.bio
   }
-  if (typeof data.image === 'string') {
+  if (typeof data.image === 'string' && data.image.trim().length > 0) {
     customProperties.push({ key: 'profileImage', value: data.image })
+    customPropertiesObject.profileImage = data.image
   }
 
-  const response = await tapestryFetch<
-    TapestryProfile | { profile: TapestryProfile }
-  >('profiles/update', {
-    method: 'PUT',
-    body: JSON.stringify({
-      profileId,
-      ...(customProperties.length > 0 ? { customProperties } : {}),
-      blockchain: 'SOLANA',
-      execution: 'FAST_UNCONFIRMED',
-    }),
-  })
+  const attempts: Array<{ endpoint: string; body: Record<string, unknown> }> = [
+    {
+      endpoint: 'profiles/update',
+      body: {
+        profileId,
+        ...(customProperties.length > 0 ? { customProperties } : {}),
+        blockchain: 'SOLANA',
+        execution: 'FAST_UNCONFIRMED',
+      },
+    },
+    {
+      endpoint: 'profiles/update',
+      body: {
+        profileId,
+        ...(Object.keys(customPropertiesObject).length > 0 ? { customProperties: customPropertiesObject } : {}),
+      },
+    },
+    {
+      endpoint: 'profiles/update',
+      body: {
+        profileId,
+        ...(data.bio !== undefined ? { bio: data.bio } : {}),
+        ...(typeof data.image === 'string' && data.image.trim().length > 0 ? { image: data.image } : {}),
+      },
+    },
+    {
+      endpoint: `profiles/${profileId}`,
+      body: {
+        ...(data.bio !== undefined ? { bio: data.bio } : {}),
+        ...(typeof data.image === 'string' && data.image.trim().length > 0 ? { image: data.image } : {}),
+        ...(Object.keys(customPropertiesObject).length > 0 ? { customProperties: customPropertiesObject } : {}),
+      },
+    },
+  ]
 
-  // Handle both flat and nested response shapes
-  if ('profile' in response && typeof response.profile === 'object') {
-    return response.profile
+  const errors: string[] = []
+
+  for (const attempt of attempts) {
+    try {
+      const response = await tapestryFetch<TapestryProfile | { profile: TapestryProfile }>(
+        attempt.endpoint,
+        {
+          method: 'PUT',
+          body: JSON.stringify(attempt.body),
+        }
+      )
+
+      if ('profile' in response && typeof response.profile === 'object') {
+        return normalizeProfile(response.profile)
+      }
+      return normalizeProfile(response as TapestryProfile)
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err))
+    }
   }
-  return response as TapestryProfile
+
+  throw new Error(errors[0] ?? 'Tapestry API error: Failed to update profile')
 }
 
 export async function searchProfilesByWallet(

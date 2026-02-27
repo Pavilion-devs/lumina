@@ -24,3 +24,30 @@ export function formatNumber(num: number): string {
 export function truncateAddress(address: string, chars = 4): string {
   return `${address.slice(0, chars)}...${address.slice(-chars)}`
 }
+
+export function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+export function isGoogleImageSearchUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    const host = url.hostname.toLowerCase()
+    const path = url.pathname.toLowerCase()
+
+    if (!host.includes('google.')) return false
+
+    if (path.startsWith('/search') || path.startsWith('/imgres') || path.startsWith('/url')) {
+      return true
+    }
+
+    return url.searchParams.has('imgurl') || url.searchParams.has('tbm')
+  } catch {
+    return false
+  }
+}

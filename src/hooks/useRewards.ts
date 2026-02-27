@@ -4,12 +4,12 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useSyncExternalStore } from 'react'
 import { getRewardsSnapshot, getServerRewardsSnapshot, subscribeRewards } from '@/lib/rewards'
 
-export function useRewards() {
+export function useRewards(activityLimit = 10) {
   const { publicKey, connected } = useWallet()
   const walletAddress = publicKey?.toBase58()
   const snapshot = useSyncExternalStore(
     subscribeRewards,
-    () => getRewardsSnapshot(walletAddress, 10),
+    () => getRewardsSnapshot(walletAddress, activityLimit),
     getServerRewardsSnapshot
   )
 

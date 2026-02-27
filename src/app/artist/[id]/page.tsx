@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Header } from '@/components/Header'
 import { TrackCard, AudioPlayer } from '@/components/audio'
-import { FollowButton, ArtistBackingCard } from '@/components/social'
+import { FollowButton, ArtistBackingCard, ArtistSocialProofCard } from '@/components/social'
 import { useFollow } from '@/hooks'
 import { Icon } from '@iconify/react'
 import { getUser, getUserTracks, getProfilePictureUrl } from '@/lib/audius'
@@ -21,7 +21,10 @@ export default function ArtistPage() {
   const [tracks, setTracks] = useState<AudiusTrack[]>([])
   const [loading, setLoading] = useState(true)
   const [currentTrack, setCurrentTrack] = useState<AudiusTrack | null>(null)
-  const { isFollowing, loading: followLoading, toggleFollow } = useFollow(artistId)
+  const { isFollowing, loading: followLoading, toggleFollow } = useFollow(artistId, {
+    artistFollowerCount: artist?.followerCount,
+  })
+  const trackIds = useMemo(() => tracks.map((track) => track.id), [tracks])
 
   useEffect(() => {
     const loadArtist = async () => {
@@ -157,6 +160,7 @@ export default function ArtistPage() {
             />
 
             <ArtistBackingCard artistId={artistId} artistName={artist.name} />
+            <ArtistSocialProofCard artistId={artistId} trackIds={trackIds} />
           </div>
         </div>
 

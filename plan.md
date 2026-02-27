@@ -75,7 +75,7 @@ User Action -> Wallet Context -> Tapestry social write/read
 ### Phase B — Social Depth
 
 - [x] Build an onchain activity feed MVP (conviction-note stream on `/feed`)
-- [ ] Add social proof modules:
+- [x] Add social proof modules:
   - recent likers on tracks
   - recent followers on artists
   - shared-fans view between user and artist
@@ -100,7 +100,7 @@ User Action -> Wallet Context -> Tapestry social write/read
 
 ### Phase D — Reputation Layer
 
-- [ ] Add supporter reputation score:
+- [x] Add supporter reputation score:
   - reward early follows before an artist trends
   - reward quality conviction notes (engagement-weighted)
   - expose badges on profile and artist supporter modules

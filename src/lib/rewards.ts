@@ -1,18 +1,12 @@
 import { REWARD_POINTS } from '@/types'
+import type { RewardActivity } from '@/types'
 
 const REWARDS_STORAGE_KEY = 'soundSocial_rewards'
 const REWARDS_UPDATED_EVENT = 'lumina_rewards_updated'
 
 interface StoredRewards {
   totalPoints: number
-  activities: Array<{
-    action: string
-    points: number
-    timestamp: string
-    trackId?: string
-    artistId?: string
-    [key: string]: unknown
-  }>
+  activities: RewardActivity[]
 }
 
 type RewardsSnapshot = {
@@ -21,6 +15,7 @@ type RewardsSnapshot = {
 }
 
 type LeaderboardEntry = { wallet: string; points: number; rank: number }
+export type RewardsRecord = { wallet: string; points: number; activities: RewardActivity[] }
 
 const EMPTY_ACTIVITY: StoredRewards['activities'] = []
 const EMPTY_REWARDS_SNAPSHOT: RewardsSnapshot = {
@@ -96,6 +91,35 @@ export function getTotalPoints(walletAddress: string): number {
 export function getRecentActivity(walletAddress: string, limit = 10): StoredRewards['activities'] {
   const rewards = getStoredRewards(walletAddress)
   return rewards.activities.slice(0, limit)
+}
+
+export function getActivitiesForWallet(walletAddress: string, limit?: number): RewardActivity[] {
+  const rewards = getStoredRewards(walletAddress)
+  return typeof limit === 'number' ? rewards.activities.slice(0, limit) : rewards.activities
+}
+
+export function getAllRewardsRecords(): RewardsRecord[] {
+  if (typeof window === 'undefined') return []
+
+  const records: RewardsRecord[] = []
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key?.startsWith(`${REWARDS_STORAGE_KEY}_`)) continue
+
+    const wallet = key.replace(`${REWARDS_STORAGE_KEY}_`, '')
+    const stored = localStorage.getItem(key)
+    if (!stored) continue
+
+    const rewards = parseStoredRewards(stored)
+    records.push({
+      wallet,
+      points: rewards.totalPoints,
+      activities: rewards.activities,
+    })
+  }
+
+  return records
 }
 
 export function getRewardsSnapshot(

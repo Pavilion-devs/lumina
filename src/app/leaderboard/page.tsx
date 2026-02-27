@@ -1,9 +1,11 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useSyncExternalStore } from 'react'
 import { Header } from '@/components/Header'
 import { Icon } from '@iconify/react'
-import { getLeaderboard, getServerLeaderboardSnapshot, subscribeRewards } from '@/lib/rewards'
+import { getActivitiesForWallet, getLeaderboard, getServerLeaderboardSnapshot, subscribeRewards } from '@/lib/rewards'
+import { computeSupporterProfile } from '@/lib/reputation'
 
 interface LeaderboardEntry {
   wallet: string
@@ -16,6 +18,14 @@ export default function LeaderboardPage() {
     subscribeRewards,
     () => getLeaderboard(20),
     getServerLeaderboardSnapshot
+  )
+  const enrichedEntries = useMemo(
+    () =>
+      entries.map((entry) => ({
+        ...entry,
+        supporter: computeSupporterProfile(entry.points, getActivitiesForWallet(entry.wallet)),
+      })),
+    [entries]
   )
 
   return (
@@ -41,8 +51,9 @@ export default function LeaderboardPage() {
         <div className="bg-white rounded-3xl border border-zinc-200 overflow-hidden">
           <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-zinc-50 border-b border-zinc-200 text-sm font-semibold text-zinc-500 uppercase tracking-wide">
             <div className="col-span-1">Rank</div>
-            <div className="col-span-8">Wallet</div>
-            <div className="col-span-3 text-right">Points</div>
+            <div className="col-span-6">Wallet</div>
+            <div className="col-span-3">Supporter</div>
+            <div className="col-span-2 text-right">Points</div>
           </div>
 
           {entries.length === 0 ? (
@@ -51,7 +62,7 @@ export default function LeaderboardPage() {
               <p>No entries yet. Be the first to earn points!</p>
             </div>
           ) : (
-            entries.map((entry, index) => (
+            enrichedEntries.map((entry, index) => (
               <div
                 key={entry.wallet}
                 className={`grid grid-cols-12 gap-4 px-6 py-4 border-b border-zinc-100 hover:bg-zinc-50 transition-colors ${
@@ -69,7 +80,7 @@ export default function LeaderboardPage() {
                     <span className="text-zinc-400 font-mono">{entry.rank}</span>
                   )}
                 </div>
-                <div className="col-span-8 flex items-center gap-3">
+                <div className="col-span-6 flex items-center gap-3">
                   <div className="w-8 h-8 bg-zinc-200 rounded-full flex items-center justify-center">
                     <Icon icon="solar:user-bold" width="16" className="text-zinc-500" />
                   </div>
@@ -77,7 +88,17 @@ export default function LeaderboardPage() {
                     {entry.wallet.slice(0, 8)}...{entry.wallet.slice(-8)}
                   </code>
                 </div>
-                <div className="col-span-3 text-right">
+                <div className="col-span-3 flex items-center">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-800 leading-tight">
+                      {entry.supporter.score} · {entry.supporter.tier}
+                    </p>
+                    {entry.supporter.badges[0] && (
+                      <p className="text-xs text-zinc-500">{entry.supporter.badges[0].label}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2 text-right">
                   <span className="text-lg font-semibold text-zinc-900">
                     {entry.points.toLocaleString()}
                   </span>

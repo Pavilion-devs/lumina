@@ -37,7 +37,12 @@ export function useArtistSignals(artistId: string | null) {
     try {
       const note = await createArtistSignal(profileId, artistId, text.trim())
       setSignals((prev) => [note, ...prev])
-      if (walletAddress) addPoints(walletAddress, 'BACK_ARTIST', { artistId })
+      if (walletAddress) {
+        addPoints(walletAddress, 'BACK_ARTIST', {
+          artistId,
+          noteLength: text.trim().length,
+        })
+      }
       return true
     } catch (err) {
       console.error('Error creating artist signal:', err)

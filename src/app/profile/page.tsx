@@ -4,7 +4,9 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { Header } from '@/components/Header'
 import { Icon } from '@iconify/react'
 import { useTapestryProfile, useRewards } from '@/hooks'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { SupporterBadgeStrip } from '@/components/social'
+import { computeSupporterProfile } from '@/lib/reputation'
 
 export default function ProfilePage() {
   const { connected } = useWallet()
@@ -19,7 +21,11 @@ export default function ProfilePage() {
     saveDisplayName,
     relinkProfile,
   } = useTapestryProfile()
-  const { totalPoints, recentActivity } = useRewards()
+  const { totalPoints, recentActivity } = useRewards(200)
+  const supporter = useMemo(
+    () => computeSupporterProfile(totalPoints, recentActivity),
+    [totalPoints, recentActivity]
+  )
 
   // Create form state
   const [username, setUsername] = useState('')
@@ -209,6 +215,12 @@ export default function ProfilePage() {
                     <span className="text-sm text-zinc-500">Total Points</span>
                     <span className="text-2xl font-bold">{totalPoints.toLocaleString()}</span>
                   </div>
+                  <SupporterBadgeStrip
+                    score={supporter.score}
+                    tier={supporter.tier}
+                    badges={supporter.badges}
+                    compact
+                  />
                 </div>
 
                 <button
